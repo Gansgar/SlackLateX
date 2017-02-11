@@ -6,6 +6,7 @@ var ws;
 var message="";
 var i = 0;
 var latex = {};
+var deletePosts = {};
 var fs = require('fs');
 fs.readFile('secret.txt','utf8',function (err, data) {
     global.token=data;
@@ -98,11 +99,23 @@ function handleMessage(mObj){
             pong(mObj.channel,"pong");
         }
         if(latex[mObj.user+mObj.channel]==true && mObj.text[0]==='$' && mObj.text[mObj.text.length-1]==='$' && mObj.text.length>1) {
-            deleteMessage(mObj.ts,mObj.channel);
+            if ( !(mObj.user+mObj.channel in deletePosts) || deletePosts[mObj.user+mObj.channel]==true)
+                deleteMessage(mObj.ts,mObj.channel);
 			postLatex(mObj.channel,replaceAll(mObj.text.substring(1,mObj.text.length-1),'&amp;','&'));
 
             console.log('Converting to latex: ' + mObj.text);
         }
+
+        if (mObj.text==='..startDelete') {
+            deletePosts[mObj.user+mObj.channel]=true;
+            console.log('Enable deleting for ' + mObj.user+mObj.channel);
+        }
+
+        if (mObj.text==='..stopDelete') {
+            deletePosts[mObj.user+mObj.channel]=false;
+            console.log('Disable deleting for ' + mObj.user+mObj.channel);
+        }
+
         
         if(mObj.text==='..startLatex') {
             latex[mObj.user+mObj.channel]=true;
@@ -111,7 +124,7 @@ function handleMessage(mObj){
 
         if(mObj.text==='..stopLatex') {
             latex[mObj.user+mObj.channel]=false;
-            console.log('disable latex for ' + mObj.user+mObj.channel);
+            console.log('Disable latex for ' + mObj.user+mObj.channel);
         }
 
     }
