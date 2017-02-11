@@ -127,6 +127,11 @@ function handleMessage(mObj,message){
 
             if (mObj.user in persons)
                 postLatex(mObj.channel, persons[mObj.user], replaceAll(mObj.text.substring(1,mObj.text.length-1),'&amp;','&'));
+            else if (mObj.user !== undefined) {
+                console.log("Renewing people!!");
+                getPeople();
+            }
+
 
             console.log('Converting to latex: ' + mObj.text);
         }
