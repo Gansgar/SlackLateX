@@ -7,6 +7,7 @@ var message="";
 var i = 0;
 var latex = {};
 var deletePosts = {};
+var persons = {};
 var fs = require('fs');
 fs.readFile('secret.txt','utf8',function (err, data) {
     global.token=data;
@@ -41,6 +42,8 @@ function createWS(url) {
         connection = conn;
         console.log('WebSocket Client Connected');
 
+        getPeople();
+
         connection.on('error', function(error) {
             console.log("Connection Error: " + error.toString());
         });
@@ -61,6 +64,22 @@ function createWS(url) {
 
 }
 
+function getPeople() {
+    var dURL = "https://slack.com/api/users.list?token="+global.token;
+
+    request(dURL, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            var usersJSON = JSON.parse(body);
+
+            usersJSON["members"].forEach(function(elem) {
+                persons[elem["id"]]=elem["name"];
+            });
+        } else {
+            
+        }
+    })
+}
+
 function deleteMessage(timestamp,channel) {
     var dURL = "https://slack.com/api/chat.delete?token="+global.token+"&ts=" +timestamp+"&channel="+channel+"&pretty=1";
 
@@ -72,10 +91,10 @@ function deleteMessage(timestamp,channel) {
         });
 }
 
-function postLatex(channel,text) {
+function postLatex(channel, user, text) {
     var urlBase= 'http://latex.codecogs.com/png.latex?%5Cdpi%7B300%7D%20'+encodeURIComponent(text);
 
-    var dURL = "https://slack.com/api/chat.postMessage?token="+global.token+"&channel="+channel+"&text=%20&as_user=true&attachments=%5B%7B%22fallback%22%3A%22.%22%2C%22color%22%3A%20%22%2336a64f%22%2C%22image_url%22%3A%22" + encodeURIComponent(urlBase)+"%22%7D%5D&pretty=1";
+    var dURL = "https://slack.com/api/chat.postMessage?token="+global.token+"&channel="+channel+"&text=by @"+encodeURIComponent(user)+"&as_user=false&attachments=%5B%7B%22fallback%22%3A%22.%22%2C%22color%22%3A%20%22%2336a64f%22%2C%22image_url%22%3A%22" + encodeURIComponent(urlBase)+"%22%7D%5D&pretty=1";
     
     request(dURL, function (error, response, body) {
          //console.log(response.url);
@@ -94,27 +113,30 @@ function handleMessage(mObj,message){
     if(mObj.type==='message'){
         
         console.log("\t"+mObj.channel+"\n");
-        console.log("\t"+mObj.user+"\n");
+        console.log("\t"+mObj.user+" - "+persons[mObj.user]+"\n");
         console.log("\t"+mObj.text+"\n");
         console.log("\t"+escape(mObj.text)+"\n");
 
         if(mObj.text==='..ping'){
             pong(mObj.channel,"pong");
         }
-        if(latex[mObj.user+mObj.channel]==true && mObj.text[0]==='$' && mObj.text[mObj.text.length-1]==='$' && mObj.text.length>1) {
-            if ( !(mObj.user+mObj.channel in deletePosts) || deletePosts[mObj.user+mObj.channel]==true)
+
+        if( (!(mObj.user+mObj.channel in latex) || latex[mObj.user+mObj.channel]==true) && mObj.text[0]==='$' && mObj.text[mObj.text.length-1]==='$' && mObj.text.length>1) {
+            if (deletePosts[mObj.user+mObj.channel]==true)
                 deleteMessage(mObj.ts,mObj.channel);
-			postLatex(mObj.channel,replaceAll(mObj.text.substring(1,mObj.text.length-1),'&amp;','&'));
+
+            if (mObj.user in persons)
+                postLatex(mObj.channel, persons[mObj.user], replaceAll(mObj.text.substring(1,mObj.text.length-1),'&amp;','&'));
 
             console.log('Converting to latex: ' + mObj.text);
         }
 
-        if (mObj.text==='..startDelete') {
+        if (mObj.text==='..withDelete') {
             deletePosts[mObj.user+mObj.channel]=true;
             console.log('Enable deleting for ' + mObj.user+mObj.channel);
         }
 
-        if (mObj.text==='..stopDelete') {
+        if (mObj.text==='..withoutDelete') {
             deletePosts[mObj.user+mObj.channel]=false;
             console.log('Disable deleting for ' + mObj.user+mObj.channel);
         }
