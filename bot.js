@@ -121,19 +121,18 @@ function handleMessage(mObj,message){
             pong(mObj.channel,"pong");
         }
 
-        if( (!(mObj.user+mObj.channel in latex) || latex[mObj.user+mObj.channel]==true) && mObj.text[0]==='$' && mObj.text[mObj.text.length-1]==='$' && mObj.text.length>1) {
-            if (deletePosts[mObj.user+mObj.channel]==true)
-                deleteMessage(mObj.ts,mObj.channel);
 
-            if (mObj.user in persons)
+        if (mObj.user in persons) {
+            if( (!(mObj.user+mObj.channel in latex) || latex[mObj.user+mObj.channel]==true) && mObj.text[0]==='$' && mObj.text[mObj.text.length-1]==='$' && mObj.text.length>1) {
+                if (deletePosts[mObj.user+mObj.channel]==true)
+                    deleteMessage(mObj.ts,mObj.channel);
+
                 postLatex(mObj.channel, persons[mObj.user], replaceAll(mObj.text.substring(1,mObj.text.length-1),'&amp;','&'));
-            else if (mObj.user !== undefined) {
-                console.log("Renewing people!!");
-                getPeople();
-            }
-
-
-            console.log('Converting to latex: ' + mObj.text);
+                console.log('Converting to latex: ' + mObj.text);
+            } 
+        } else if (mObj.user !== undefined) {
+            console.log("Renewing people!!");
+            getPeople();
         }
 
         if (mObj.text==='..withDelete') {
